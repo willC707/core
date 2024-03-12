@@ -1,0 +1,13 @@
+{
+  "domain": "lch",
+  "name": "Light Control Hub",
+  "codeowners": ["@willC707"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://www.home-assistant.io/integrations/lch",
+  "homekit": {},
+  "iot_class": "local_polling",
+  "requirements": [],
+  "ssdp": [],
+  "zeroconf": []
+}
