@@ -2,33 +2,25 @@
 
 from __future__ import annotations
 
-import serial
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
+from .config_flow import LightControlHub
 from .const import DOMAIN
 
-
-
-# TODO List the platforms that you want to support.
-# For your initial PR, limit it to 1 platform.
 PLATFORMS: list[Platform] = [Platform.LIGHT]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Light Control Hub from a config entry."""
 
-    hass.data.setdefault(DOMAIN, {})
-    
-    try:
-        ser = serial.Serial(entry.data["port"])
-        print(f"Using port {ser.name}")
-    except serial.SerialException as e:
-        print(f"Error opening serial port: {e}")
+    hub = LightControlHub(entry.data["port"])
+
+    if not hub.test_connection():
         return False
-    
-    hass.data[DOMAIN][entry.entry_id] = ser
+
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = hub
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 

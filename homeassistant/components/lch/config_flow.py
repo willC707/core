@@ -5,9 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import voluptuous as vol
 import serial
-from serial.tools import list_ports
+import voluptuous as vol
 
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_PORT
@@ -18,7 +17,6 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-# TODO adjust the data schema to the data that you need
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_PORT): str,
@@ -26,46 +24,27 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 
-# class PlaceholderHub:
-#     """Placeholder class to make tests pass.
+class LightControlHub:
+    def __init__(self, port) -> None:
+        self.ser = serial.Serial(port, 115200)
 
-#     TODO Remove this placeholder class and replace with things from your PyPI package.
-#     """
+    def send_command(self, command):
+        self.ser.write(command.encode())
 
-#     def __init__(self, host: str) -> None:
-#         """Initialize."""
-#         self.host = host
+    def test_connection(self):
+        try:
+            self.send_command("I")
+            return True
+        except:
+            return False
 
-#     async def authenticate(self, username: str, password: str) -> bool:
-#         """Test if we can authenticate with the host."""
-#         return True
 
+async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
+    hub = LightControlHub(data[CONF_PORT])
 
-# async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
-#     """Validate the user input allows us to connect.
-
-#     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
-#     """
-#     # TODO validate the data can be used to set up a connection.
-
-#     # If your PyPI package is not built with async, pass your methods
-#     # to the executor:
-#     # await hass.async_add_executor_job(
-#     #     your_validate_func, data[CONF_USERNAME], data[CONF_PASSWORD]
-#     # )
-
-#     hub = PlaceholderHub(data[CONF_HOST])
-
-#     if not await hub.authenticate(data[CONF_USERNAME], data[CONF_PASSWORD]):
-#         raise InvalidAuth
-
-#     # If you cannot connect:
-#     # throw CannotConnect
-#     # If the authentication is wrong:
-#     # InvalidAuth
-
-#     # Return info that you want to store in the config entry.
-#     return {"title": "Name of the device"}
+    if not hub.test_connection():
+        raise CannotConnect
+    return {"title": "Light Control Hub"}
 
 
 class ConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -80,17 +59,16 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             try:
-                ser = serial.Serial(user_input[CONF_PORT])
-                ser.close()
-            except serial.SerialException:
+                info = await validate_input(self.hass, user_input)
+            except CannotConnect:
                 errors["base"] = "cannot_connect"
-            except Exception:  # pylint: disable=broad-except
-                _LOGGER.exception("Unexpected exception")
-                errors["base"] = "unknown"
             else:
-                return self.async_create_entry(title=f"Light Control Hub ({user_input[CONF_PORT]})", data=user_input)
+                return self.async_create_entry(title=info["title"], data=user_input)
 
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
         )
 
+
+class CannotConnect(HomeAssistantError):
+    """Error to indicate we cannot connect"""
